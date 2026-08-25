@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Noctua 🦉 | Suite de Control y Gestión Académica</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- CABECERA SUPERIOR FIJA -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-logo">🦉</span>
+        <div>
+          <h1>Noctua <span id="brand-uni-name">Academic</span></h1>
+        </div>
+      </div>
+      <div class="header-nav-actions">
+        <button class="nav-btn on" id="bCal" type="button">📅 Calendario</button>
+        <button class="nav-btn" id="bList" type="button">☰ Lista</button>
+        <button class="nav-btn" id="bEnt" type="button">📋 Entregas</button>
+        <button class="nav-btn" id="bNot" type="button">📊 Notas</button>
+        <button class="nav-btn" id="bReg" type="button">⚙️ Registro</button>
+        <button class="nav-btn" id="bAcerca" type="button">ℹ️ Acerca de</button>
+        
+        <!-- Botones de Reportes y Datos -->
+        <button class="btn sm grn" id="btnReportExcel" type="button" title="Descargar planilla completa en formato Excel (.csv)">📊 Excel</button>
+        <button class="btn sm" id="btnReportPDF" type="button" title="Generar e imprimir boletín oficial en PDF">📄 PDF</button>
+        <button class="btn cyan sm" id="btnOpenEvtModal" type="button">＋ Evento</button>
+        <button class="btn ghost sm" id="btnOpenIEModal" type="button" title="Importar o exportar copia de seguridad">⬆⬇ Datos</button>
+        
+        <!-- Indicador y Botón de Estado de Guardado -->
+        <button type="button" id="save-status-btn" class="save-status-btn synced" title="Estado de guardado: Todo sincronizado. Haz clic para guardar cambios pendientes.">
+          <span id="save-status-icon">✔</span> <span id="save-status-txt">Guardado</span>
+        </button>
+
+        <button id="theme-toggle" class="icon-btn sm" type="button" aria-label="Cambiar tema" title="Alternar tema claro/oscuro">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- FRANJA DE PROGRESO RÁPIDO SUPERIOR (PROGRESS STRIP) -->
+    <section class="progress-strip" id="ps" aria-label="Resumen de avance por asignatura"></section>
+
+    <!-- CONTENIDO PRINCIPAL DE VISTAS -->
+    <main class="main-container">
+      <!-- BARRA DE FILTROS POR ASIGNATURA -->
+      <div class="filter-bar" id="fbar"></div>
+
+      <!-- ── VISTA 1: CALENDARIO ── -->
+      <section class="view-panel" id="calV">
+        <div class="cal-nav-bar" id="cnav">
+          <div class="nav-btn-group">
+            <button class="icon-nav-btn" id="prev-month-btn" type="button" title="Mes anterior">‹</button>
+            <button class="icon-nav-btn wide" id="today-btn" type="button">Hoy</button>
+            <button class="icon-nav-btn" id="next-month-btn" type="button" title="Mes siguiente">›</button>
+          </div>
+          <h2 id="calendar-month-title">Mes actual</h2>
+          <div class="urgency-legend">
+            <div class="legend-item"><span class="legend-dot red"></span>≤3 días (urgente)</div>
+            <div class="legend-item"><span class="legend-dot yel"></span>≤7 días (esta semana)</div>
+            <div class="legend-item"><span class="legend-dot grn"></span>Habilitada</div>
+            <div class="legend-item"><span class="legend-dot cyan dashed"></span>Evento general</div>
+          </div>
+        </div>
+        <div class="calendar-grid-header" id="dowr"></div>
+        <div class="calendar-grid-body" id="calg"></div>
+      </section>
+
+      <!-- ── VISTA 2: LISTA CRONOLÓGICA ── -->
+      <section class="view-panel hidden" id="listV"></section>
+
+      <!-- ── VISTA 3: ENTREGAS Y EVIDENCIAS ── -->
+      <section class="view-panel hidden" id="entV"></section>
+
+      <!-- ── VISTA 4: NOTAS Y TABLA INTERACTIVA ── -->
+      <section class="view-panel hidden" id="notV"></section>
+
+      <!-- ── VISTA 5: REGISTRO Y ADMINISTRACIÓN ── -->
+      <section class="view-panel hidden" id="regV">
+        <div class="panel-grid">
+          <div class="panel">
+            <h2>Configuración de la institución</h2>
+            <form id="settings-form" class="stack-form">
+              <label>
+                <span>Nombre de la universidad o entidad</span>
+                <input type="text" id="university-name-input" name="university_name" placeholder="Ej: Universidad Nacional" required />
+              </label>
+              <button type="submit" class="btn primary">Guardar nombre</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h2 id="period-form-title">Nuevo periodo académico</h2>
+            <form id="period-form" class="stack-form">
+              <input type="hidden" id="period-id" name="period_id" />
+              <label>
+                <span>Nombre del periodo</span>
+                <input type="text" id="period-name" name="name" placeholder="Ej: Semestre 2026-1" required />
+              </label>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Fecha de inicio</span>
+                  <input type="date" id="period-start" name="start_date" />
+                </label>
+                <label>
+                  <span>Fecha de fin</span>
+                  <input type="date" id="period-end" name="end_date" />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn primary" id="period-submit-btn">Guardar periodo</button>
+                <button type="button" class="btn ghost hidden" id="cancel-period-edit">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel">
+            <h2 id="subject-form-title">Nueva asignatura</h2>
+            <form id="subject-form" class="stack-form">
+              <input type="hidden" id="subject-id" name="subject_id" />
+              <div class="field-row two-columns">
+                <label>
+                  <span>Nombre de la materia</span>
+                  <input type="text" id="subject-name" name="name" placeholder="Ej: Arquitectura de Software" required />
+                </label>
+                <label>
+                  <span>Código</span>
+                  <input type="text" id="subject-code" name="code" placeholder="Ej: SOF-301" />
+                </label>
+              </div>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Profesor(a)</span>
+                  <input type="text" id="subject-teacher" name="teacher" placeholder="Ej: Dr. Pérez" />
+                </label>
+                <label>
+                  <span>Periodo académico</span>
+                  <select id="subject-period" name="period_id"></select>
+                </label>
+              </div>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Puntaje o valor total</span>
+                  <input type="number" id="subject-total" name="total_grade_value" value="100" min="1" step="0.1" />
+                </label>
+                <label>
+                  <span>Color distintivo</span>
+                  <input type="color" id="subject-color" name="color" value="#3B82F6" />
+                </label>
+              </div>
+              <label>
+                <span>Notas u observaciones</span>
+                <textarea id="subject-notes" name="notes" rows="2" placeholder="Criterios de evaluación, horarios..."></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="btn primary" id="subject-submit-btn">Guardar asignatura</button>
+                <button type="button" class="btn ghost hidden" id="cancel-subject-edit">Cancelar</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h2 id="activity-form-title">Nueva actividad o evaluación</h2>
+            <form id="activity-form" class="stack-form">
+              <input type="hidden" id="activity-id" name="activity_id" />
+              <label>
+                <span>Asignatura correspondiente</span>
+                <select id="activity-subject" name="subject_id" required></select>
+              </label>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Título de la actividad</span>
+                  <input type="text" id="activity-title" name="title" placeholder="Ej: Taller 1 / Cuestionario / Parcial" required />
+                </label>
+                <label>
+                  <span>Tipo de evaluación</span>
+                  <select id="activity-type" name="activity_type">
+                    <option value="Tarea">Tarea / Trabajo</option>
+                    <option value="Examen">Examen / Parcial</option>
+                    <option value="Cuestionario Virtual">Cuestionario / Quiz Virtual (Nota inmediata)</option>
+                    <option value="Taller">Taller / Guía</option>
+                    <option value="Proyecto">Proyecto / Fase</option>
+                    <option value="Laboratorio">Laboratorio / Práctica</option>
+                    <option value="Foro">Foro / Participación</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Fecha límite de entrega</span>
+                  <input type="date" id="activity-due-date" name="due_date" />
+                </label>
+                <label>
+                  <span>Puntos / Peso (%)</span>
+                  <input type="number" id="activity-weight" name="weight" value="20" min="0" step="0.1" required />
+                </label>
+              </div>
+              <div class="field-row two-columns">
+                <label>
+                  <span>Puntaje máximo</span>
+                  <input type="number" id="activity-grade-total" name="grade_total" value="100" min="1" step="0.1" required />
+                </label>
+                <label>
+                  <span>Nota obtenida <small style="color:var(--mu);font-weight:normal;">(Opcional / Dejar vacío al planear)</small></span>
+                  <input type="number" id="activity-grade" name="grade_obtained" min="0" step="0.1" placeholder="Solo si ya fue calificada" />
+                </label>
+              </div>
+              <div style="font-size:0.75rem;color:var(--mu);margin-top:-4px;line-height:1.4;">
+                💡 <em>Nota:</em> Para tareas normales, deja la nota vacía. Al enviarla registrarás tu entrega y la nota se ingresará cuando el profesor califique. Para exámenes virtuales con resultado instantáneo, puedes colocar tu nota de una vez.
+              </div>
+              <div class="form-actions" style="margin-top:10px;">
+                <button type="submit" class="btn primary" id="activity-submit-btn">Guardar actividad</button>
+                <button type="button" class="btn ghost hidden" id="cancel-activity-edit">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel">
+            <h2>Métricas generales</h2>
+            <div id="registration-summary" class="summary-boxes"></div>
+          </div>
+          <div class="panel">
+            <h2>Periodos académicos</h2>
+            <div id="period-list" class="period-list"></div>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="section-header with-controls">
+            <h2>Asignaturas registradas</h2>
+            <div class="filter-controls">
+              <input type="search" id="subject-search-input" placeholder="🔍 Buscar asignatura, código o profesor..." />
+              <select id="subject-period-filter" aria-label="Filtrar por periodo">
+                <option value="all">Todos los periodos</option>
+              </select>
+            </div>
+          </div>
+          <div id="subjects-list" class="subjects-list"></div>
+        </section>
+      </section>
+
+      <!-- ── VISTA 6: ACERCA DE & INSTRUCTIVO ── -->
+      <section class="view-panel hidden" id="acercaV">
+        <div class="about-hero">
+          <div class="about-brand-row">
+            <span style="font-size:2rem;">🦉</span>
+            <div>
+              <div class="about-brand-title">Noctua Academic</div>
+              <div style="font-size:0.75rem;color:var(--mu);font-weight:600;">Suite de Control y Productividad Académica Universitaria · v2.0.0</div>
+            </div>
+          </div>
+          <p class="about-lead">
+            Plataforma local autónoma inspirada en el símbolo de la sabiduría, diseñada para que estudiantes y profesionales lleven el control riguroso de sus semestres,
+            calificaciones en escala 0.0–5.0, evidencias de entrega (Drive, GitHub, Teams) y alertas de vencimiento con persistencia segura en SQLite.
+          </p>
+        </div>
+
+        <!-- GUÍA DE USO PASO A PASO -->
+        <div class="panel">
+          <div class="section-header">
+            <h2>📖 Guía Rápida e Instructivo de Uso</h2>
+          </div>
+          <div class="about-steps-grid">
+            <div class="step-card">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Configura tu Semestre y Materias</h4>
+                <p>Ve a <strong>Registro</strong>, crea tu periodo académico (ej. <em>2026-1</em>) y agrega tus asignaturas con su escala de puntos (100 pts) y color representativo.</p>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>Planifica tus Evaluaciones</h4>
+                <p>Registra las tareas, talleres, quizzes y parciales con su fecha límite y porcentaje de peso (%) del curso. Deja la nota vacía para llenarla después.</p>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <h4>Adjunta Evidencias de Entrega</h4>
+                <p>Al enviar un trabajo, abre la actividad y guarda el enlace (Google Drive, GitHub, OneDrive) y plataforma. La tarea pasará a estado <em>Entregada (esperando nota)</em>.</p>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <h4>Registra tus Calificaciones</h4>
+                <p>Para exámenes virtuales, digita tu nota inmediata al enviar. Para trabajos docentes, ingrésala en el modal o directamente en la tabla de <strong>Notas</strong>.</p>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <h4>Monitorea y Simula tu Promedio</h4>
+                <p>La franja superior (<em>Progress Strip</em>) te muestra en tiempo real si vas aprobando (≥ 3.0 / 5.0) y la vista de Notas calcula los puntos exactos que te faltan.</p>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-num">6</div>
+              <div class="step-content">
+                <h4>Archiva Periodos y Haz Respaldos</h4>
+                <p>Al terminar un semestre, pulsa <strong>📦 Archivar</strong> en Registro para despejar la barra superior sin perder tu histórico de notas. Puedes exportar respaldos JSON con un clic.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LICENCIA Y DERECHOS -->
+        <div class="panel">
+          <div class="license-box">
+            <div class="license-header">
+              <div class="license-title">
+                <span>⚖️</span>
+                <span>Licencia y Términos de Uso</span>
+              </div>
+              <span class="license-badge">CC BY-NC 4.0</span>
+            </div>
+            <p class="license-text">
+              Este software y su código fuente están licenciados bajo la licencia
+              <strong>Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)</strong>.
+            </p>
+            <ul style="font-size:0.78rem;color:var(--mu);margin:8px 0 0 16px;line-height:1.5;">
+              <li><strong>Eres libre de:</strong> Compartir, copiar, redistribuir y adaptar el material para fines personales y formativos.</li>
+              <li><strong>Bajo las siguientes condiciones:</strong> Dar crédito adecuado (Atribución) y <strong>no usar el material para propósitos comerciales o lucro directo</strong>.</li>
+            </ul>
+          </div>
+
+          <!-- ARQUITECTURA Y PRIVACIDAD -->
+          <div class="section-header" style="margin-top:16px;">
+            <h3>🛡️ Privacidad, Seguridad y Tecnologías</h3>
+          </div>
+          <p style="font-size:0.82rem;color:var(--tx);line-height:1.5;">
+            Toda tu información académica se guarda localmente en el archivo <code>data/university.db</code> mediante SQLite en modo WAL (Write-Ahead Logging).
+            No requiere conexión a servidores externos ni comparte datos con terceros.
+          </p>
+
+          <div class="tech-badges-row">
+            <span class="tech-badge">🟢 Node.js v24</span>
+            <span class="tech-badge">⚡ Express REST API</span>
+            <span class="tech-badge">💾 SQLite (better-sqlite3)</span>
+            <span class="tech-badge">🎨 Vanilla CSS3 & SPA</span>
+            <span class="tech-badge">🔒 100% Offline & Local</span>
+          </div>
+
+          <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn primary sm" onclick="exportAll()">⬇ Exportar copia de seguridad JSON</button>
+            <button type="button" class="btn cyan sm" onclick="openIE()">⬆ Importar / Restaurar datos</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MODALES DE LA APLICACIÓN                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+    <!-- ══ MODAL 1: DETALLE RÁPIDO DE ACTIVIDAD ══════════════════════════ -->
+    <div class="modal-overlay" id="actOv">
+      <div class="modal-card wide">
+        <div class="modal-header">
+          <div class="modal-accent-bar" id="mCol"></div>
+          <div class="modal-title-box">
+            <h3 id="mNm"></h3>
+            <p id="mSb"></p>
+          </div>
+          <button class="modal-close-btn" type="button" id="closeActModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-badges" id="mBgs"></div>
+
+          <div class="dates-grid">
+            <div class="date-box">
+              <div class="date-lbl">Fecha Límite</div>
+              <div class="date-val" id="mEn"></div>
+            </div>
+            <div class="date-box">
+              <div class="date-lbl">Ponderación</div>
+              <div class="date-val" id="mWeight"></div>
+            </div>
+          </div>
+
+          <!-- Indicador de flujo y estado de la actividad -->
+          <div class="activity-flow-status" id="mFlowStatus" style="margin:12px 0;padding:10px 14px;border-radius:var(--rd);background:var(--s2);font-size:0.8rem;display:flex;align-items:center;gap:10px;">
+            <span id="mFlowIcon" style="font-size:1.2rem;">🟡</span>
+            <div>
+              <strong id="mFlowTitle">Estado: Pendiente por entregar</strong>
+              <div id="mFlowDesc" style="color:var(--mu);font-size:0.75rem;">Aún no se ha registrado entrega ni calificación.</div>
+            </div>
+          </div>
+
+          <!-- Botón grande interactivo: Marcar como realizada / entregada -->
+          <div class="done-toggle-btn" id="doneB">
+            <div class="done-check-box" id="doneChk"></div>
+            <div class="done-txt">
+              <strong id="doneTxtMain">Marcar como realizada / entregada</strong>
+              <span id="doneDt">Haz clic para marcar que ya enviaste esta actividad</span>
+            </div>
+          </div>
+
+          <!-- Resumen de entrega / evidencia -->
+          <div class="submission-summary" id="entSum" style="display:none;margin:12px 0;">
+            <div class="summary-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>📋 Evidencia de entrega registrada</span>
+              <button class="btn sm ghost" id="btnEditEnt" type="button">✏ Editar</button>
+            </div>
+            <div id="entSumBody" style="font-size:0.8rem;line-height:1.5;margin-top:6px;"></div>
+          </div>
+
+          <!-- Calificador interactivo (para cuando el profesor califica o exámenes con nota inmediata) -->
+          <div class="grade-section" id="calSec">
+            <div class="grade-section-header">
+              <span>⭐ Calificación definitiva / Obtenida</span>
+              <span class="grade-preview-chip" id="calPreview"></span>
+            </div>
+            <p style="font-size:0.73rem;color:var(--mu);margin:2px 0 8px 0;">
+              Ingresa la nota cuando el docente publique los resultados o inmediatamente tras terminar un examen virtual.
+            </p>
+            <div class="grade-input-row">
+              <input type="number" class="grade-num-input" id="calInput" min="0" step="0.1" placeholder="Ej: 85" />
+              <span class="grade-of">/ <strong id="calMax">100</strong> pts</span>
+            </div>
+            <div class="grade-mini-bar"><div class="grade-mini-fill" id="calFill"></div></div>
+            <div class="grade-note-text" id="calNoteTxt"></div>
+            <div class="grade-actions-row">
+              <button class="btn grn sm" id="btnSaveGradeModal" type="button">💾 Guardar calificación</button>
+              <button class="btn sm red" id="btnDelGradeModal" type="button">Quitar nota (Dejar pendiente)</button>
+            </div>
+          </div>
+
+          <div class="modal-footer-actions" style="margin-top:14px;">
+            <button class="btn sm" id="btnRegEnt" type="button">📨 Registrar / Adjuntar evidencia de entrega</button>
+            <button class="btn ghost sm" id="btnDelEnt" type="button" style="display:none;">🗑 Borrar evidencia</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL 2: FORMULARIO DE ENTREGA Y EVIDENCIA ════════════════════ -->
+    <div class="modal-overlay" id="entOv">
+      <div class="modal-card wide">
+        <div class="modal-header">
+          <div class="modal-accent-bar" style="background:var(--grn)"></div>
+          <div class="modal-title-box">
+            <h3 id="entFTit">Registrar evidencia de entrega</h3>
+            <p style="font-size:0.75rem;color:var(--mu);">Guarda los datos de envío de tu trabajo o examen</p>
+          </div>
+          <button class="modal-close-btn" type="button" id="closeEntModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row two-columns">
+            <div class="form-group">
+              <label>Fecha de envío / entrega <span class="req">*</span></label>
+              <input type="date" id="efFecha" required />
+            </div>
+            <div class="form-group">
+              <label>Plataforma o medio</label>
+              <input type="text" id="efPlat" placeholder="Ej: Moodle, Teams, Classroom, Correo..." />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Enlace a la evidencia / archivo en la nube</label>
+            <input type="url" id="efLink" placeholder="https://drive.google.com/... o enlace de GitHub / OneDrive" />
+          </div>
+          <div class="form-group">
+            <label>Observaciones / Retroalimentación docente</label>
+            <textarea id="efNotas" rows="2" placeholder="Comentarios del tutor, enlace a la rúbrica o apuntes personales..."></textarea>
+          </div>
+
+          <!-- Opción para exámenes virtuales con resultado inmediato -->
+          <div class="form-group" style="padding:10px 12px;background:var(--s2);border-radius:var(--rd);border:1px dashed var(--bd);">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:0.8rem;">
+              <input type="checkbox" id="efHasInstantGrade" style="width:auto;" />
+              <span>¿Es un examen / quiz virtual con calificación inmediata?</span>
+            </label>
+            <div id="efInstantGradeWrap" style="display:none;margin-top:8px;">
+              <label style="font-size:0.75rem;color:var(--mu);">Calificación obtenida en el examen:</label>
+              <input type="number" id="efInstantGradeVal" min="0" step="0.1" placeholder="Ej: 90" style="margin-top:4px;" />
+            </div>
+          </div>
+
+          <div class="modal-footer-actions right" style="margin-top:12px;">
+            <button class="btn ghost" type="button" id="cancelEntModal">Cancelar</button>
+            <button class="btn grn" type="button" id="saveEntBtn">Guardar entrega</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL 3: AGREGAR / EDITAR EVENTO GENERAL ══════════════════════ -->
+    <div class="modal-overlay" id="evtFOv">
+      <div class="modal-card wide">
+        <div class="modal-header">
+          <div class="modal-accent-bar" style="background:var(--ce)"></div>
+          <div class="modal-title-box">
+            <h3 id="evtFTit">Agregar evento académico</h3>
+          </div>
+          <button class="modal-close-btn" type="button" id="closeEvtFModal">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="evtId" />
+          <div class="form-group">
+            <label>Título del evento <span class="req">*</span></label>
+            <input type="text" id="evtNm" placeholder="Ej: Conferencia de IA / Sustentación" required />
+          </div>
+          <div class="field-row two-columns">
+            <div class="form-group">
+              <label>Categoría <span class="req">*</span></label>
+              <select id="evtCategorySelect"></select>
+            </div>
+            <div class="form-group">
+              <label>Fecha <span class="req">*</span></label>
+              <input type="date" id="evtDt" required />
+            </div>
+          </div>
+          <div class="field-row two-columns">
+            <div class="form-group">
+              <label>Hora</label>
+              <input type="time" id="evtTm" />
+            </div>
+            <div class="form-group">
+              <label>Ubicación / Plataforma</label>
+              <input type="text" id="evtPl" placeholder="Ej: Auditorio Central / Zoom" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Enlace web</label>
+            <input type="url" id="evtLk" placeholder="https://meet.google.com/..." />
+          </div>
+          <div class="form-group">
+            <label>Descripción / Observaciones</label>
+            <textarea id="evtNt" rows="2" placeholder="Temas a tratar, preparación requerida..."></textarea>
+          </div>
+          <div class="modal-footer-actions right">
+            <button class="btn ghost" type="button" id="cancelEvtFModal">Cancelar</button>
+            <button class="btn cyan" type="button" id="saveEvtBtn">Guardar evento</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL 4: DETALLE DE EVENTO GENERAL ════════════════════════════ -->
+    <div class="modal-overlay" id="evtDOv">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-accent-bar" style="background:var(--ce)"></div>
+          <div class="modal-title-box">
+            <h3 id="edTit"></h3>
+            <div class="modal-subtitle" id="edSb"></div>
+          </div>
+          <button class="modal-close-btn" type="button" id="closeEvtDModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="badge-row" id="edBgs"></div>
+          <div class="dates-grid" id="edDts"></div>
+          <div class="modal-desc" id="edNts" style="display:none"></div>
+          <div class="modal-footer-actions">
+            <button class="btn cyan sm" id="editEvtBtn" type="button">✏ Editar</button>
+            <button class="btn red sm" id="delEvtBtn" type="button">🗑 Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL 5: IMPORTAR / EXPORTAR DRAG & DROP ═════════════════════ -->
+    <div class="modal-overlay" id="ieOv">
+      <div class="modal-card wide">
+        <div class="modal-header">
+          <div class="modal-accent-bar" style="background:var(--c1)"></div>
+          <div class="modal-title-box">
+            <h3>⬆⬇ Importar / Exportar Datos</h3>
+            <div class="modal-subtitle">Respalda o traslada tu información entre equipos</div>
+          </div>
+          <button class="modal-close-btn" type="button" id="closeIEModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="ie-tabs">
+            <button class="ie-tab on" id="ieTabExpBtn" type="button">⬇ Exportar Respaldo</button>
+            <button class="ie-tab" id="ieTabImpBtn" type="button">⬆ Importar Archivo</button>
+          </div>
+
+          <!-- PANEL EXPORTAR -->
+          <div class="ie-panel on" id="ieExp">
+            <div class="ie-box">
+              <p>Descarga un archivo <strong>.json</strong> con todas tus asignaturas, notas, actividades, entregas y eventos registrados.</p>
+              <div class="ie-stats-grid" id="ieExpSum"></div>
+              <button class="btn primary" style="width:100%;margin-top:12px;" onclick="exportAll()" type="button">
+                ⬇ Descargar copia de seguridad completa (.json)
+              </button>
+              <div class="ie-subtext" id="ieLastExport"></div>
+            </div>
+          </div>
+
+          <!-- PANEL IMPORTAR (DRAG & DROP) -->
+          <div class="ie-panel hidden" id="ieImp">
+            <div class="ie-dropzone" id="ieDropZone">
+              <input type="file" id="ieFileInput" accept=".json" />
+              <div id="ieDropLabel">
+                <div class="ie-drop-icon">📂</div>
+                <div class="ie-drop-text">
+                  <strong>Arrastra tu archivo .json aquí</strong><br />
+                  o haz clic para seleccionarlo
+                </div>
+              </div>
+              <div id="iePreview" style="display:none"></div>
+            </div>
+
+            <div class="ie-import-actions" id="ieImportActions" style="display:none">
+              <button class="btn grn" id="ieMergeBtn" type="button">
+                🔀 Combinar <small>(agrega nuevos registros sin borrar los existentes)</small>
+              </button>
+              <button class="btn red" id="ieReplaceBtn" type="button">
+                ♻ Reemplazar <small>(restaura copia exacta)</small>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIÁLOGO MODAL DE CONFIRMACIÓN -->
+    <dialog id="confirm-modal" class="custom-dialog">
+      <form method="dialog" class="dialog-content">
+        <h3 id="confirm-modal-title">Confirmar acción</h3>
+        <p id="confirm-modal-message">¿Estás seguro de que deseas realizar esta operación?</p>
+        <div class="dialog-actions">
+          <button type="button" class="btn ghost" id="confirm-modal-cancel">Cancelar</button>
+          <button type="button" class="btn red" id="confirm-modal-ok">Confirmar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- CONTENEDOR DE BOLETÍN ACADÉMICO PARA IMPRESIÓN Y PDF -->
+    <div id="print-report-container" class="print-only"></div>
+
+    <!-- CONTENEDOR DE TOASTS DE NOTIFICACIÓN -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+

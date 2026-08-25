@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Archivos temporales SQLite (WAL y SHM)
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
