@@ -29,3 +29,4 @@ Noctua-Portable/
 dist/
 dist-portable/
 *.zip
+!Noctua-Academic-v2.1.0-Portable-Windows.zip
