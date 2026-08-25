@@ -148,9 +148,18 @@
                   <input type="number" id="subject-total" name="total_grade_value" value="100" min="1" step="0.1" />
                 </label>
                 <label>
+                  <span>Puntaje para aprobar</span>
+                  <input type="number" id="subject-passing" name="passing_grade_value" value="60" min="0" step="0.1" placeholder="Ej: 60" />
+                </label>
+              </div>
+              <div class="field-row two-columns">
+                <label>
                   <span>Color distintivo</span>
                   <input type="color" id="subject-color" name="color" value="#3B82F6" />
                 </label>
+                <div style="display:flex;align-items:center;font-size:0.75rem;color:var(--mu);padding-top:14px;">
+                  💡 <em>Aprobación por defecto: 60% del valor total (ej. 60 de 100 pts o 300 de 500 pts).</em>
+                </div>
               </div>
               <label>
                 <span>Notas u observaciones</span>
@@ -210,7 +219,7 @@
                 </label>
               </div>
               <div style="font-size:0.75rem;color:var(--mu);margin-top:-4px;line-height:1.4;">
-                💡 <em>Nota:</em> Para tareas normales, deja la nota vacía. Al enviarla registrarás tu entrega y la nota se ingresará cuando el profesor califique. Para exámenes virtuales con resultado instantáneo, puedes colocar tu nota de una vez.
+                💡 <em>Sincronización automática:</em> Al cambiar el puntaje máximo o la materia, el peso porcentual (%) se recalculará automáticamente según la escala de la asignatura.
               </div>
               <div class="form-actions" style="margin-top:10px;">
                 <button type="submit" class="btn primary" id="activity-submit-btn">Guardar actividad</button>
@@ -243,6 +252,19 @@
           </div>
           <div id="subjects-list" class="subjects-list"></div>
         </section>
+
+        <section class="panel">
+          <div class="section-header with-controls">
+            <h2>Actividades registradas</h2>
+            <div class="filter-controls">
+              <input type="search" id="activity-search-input" placeholder="🔍 Buscar actividad por título..." />
+              <select id="activity-subject-filter" aria-label="Filtrar por materia">
+                <option value="all">Todas las asignaturas</option>
+              </select>
+            </div>
+          </div>
+          <div id="activities-list" class="activities-reg-list"></div>
+        </section>
       </section>
 
       <!-- ── VISTA 6: ACERCA DE & INSTRUCTIVO ── -->
@@ -252,7 +274,7 @@
             <span style="font-size:2rem;">🦉</span>
             <div>
               <div class="about-brand-title">Noctua Academic</div>
-              <div style="font-size:0.75rem;color:var(--mu);font-weight:600;">Suite de Control y Productividad Académica Universitaria · v2.0.0</div>
+              <div style="font-size:0.75rem;color:var(--mu);font-weight:600;">Suite de Control y Productividad Académica Universitaria · v2.1.0</div>
             </div>
           </div>
           <p class="about-lead">
@@ -459,6 +481,10 @@
           <button class="modal-close-btn" type="button" id="closeEntModal">×</button>
         </div>
         <div class="modal-body">
+          <div class="form-group" id="efSelectActWrap" style="display:none;margin-bottom:12px;">
+            <label>Seleccionar Asignatura y Actividad a Entregar <span class="req">*</span></label>
+            <select id="efActSelect"></select>
+          </div>
           <div class="field-row two-columns">
             <div class="form-group">
               <label>Fecha de envío / entrega <span class="req">*</span></label>

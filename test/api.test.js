@@ -169,6 +169,23 @@ test('CRUD de Asignaturas, Actividades y verificacion de Bugfix de Actualizacion
   assert.equal(Math.round(metricsRes.data.final_grade_percent), 90);
   assert.equal(Math.round(metricsRes.data.final_grade_value), 90);
 
+  // 6. MODIFICACIÓN RETROACTIVA: Modificar docente y valor de aprobación
+  const updateSubRes = await request('/api/subjects/' + subjectId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Estructuras de Datos Avanzadas',
+      code: 'ED-102',
+      teacher: 'Dra. Ada Lovelace',
+      total_grade_value: 100,
+      passing_grade_value: 70
+    })
+  });
+  assert.equal(updateSubRes.status, 200);
+  assert.equal(updateSubRes.data.teacher, 'Dra. Ada Lovelace');
+  assert.equal(updateSubRes.data.passing_grade_value, 70);
+  assert.equal(updateSubRes.data.passing_target_percent, 70);
+
   // Limpiar
   await request('/api/subjects/' + subjectId, { method: 'DELETE' });
 });

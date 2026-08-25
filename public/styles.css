@@ -1055,7 +1055,8 @@ body {
 }
 
 .subjects-list,
-.period-list {
+.period-list,
+.activities-reg-list {
   display: flex;
   flex-direction: column;
   gap: 8px;

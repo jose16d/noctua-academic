@@ -647,6 +647,27 @@ function renderEntregasView() {
   if (!container) return;
   container.innerHTML = '';
 
+  // Barra de herramientas de entregas con botón para registrar nueva entrega
+  const toolbar = document.createElement('div');
+  toolbar.style.display = 'flex';
+  toolbar.style.justifyContent = 'space-between';
+  toolbar.style.alignItems = 'center';
+  toolbar.style.flexWrap = 'wrap';
+  toolbar.style.gap = '8px';
+  toolbar.style.marginBottom = '14px';
+
+  toolbar.innerHTML = `
+    <div style="font-size:0.88rem;font-weight:700;color:var(--tx);">
+      📋 Registro y Control de Entregas / Evidencias
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="btn grn sm" id="btnNewEntregaEntV" onclick="openNewEntregaModal()">
+        ＋ Registrar Nueva Entrega
+      </button>
+    </div>
+  `;
+  container.appendChild(toolbar);
+
   let allActivities = [];
   const subjectsToUse = state.showArchivedInViews
     ? state.subjects
@@ -667,12 +688,13 @@ function renderEntregasView() {
   const deliveredActivities = allActivities.filter((a) => a.submitted_at || a.submission_link || a.completed_date || a.status === 'aprobado' || a.status === 'presentado');
 
   if (!deliveredActivities.length) {
-    container.innerHTML = `
-      <div style="color:var(--mu);text-align:center;padding:50px 20px;">
-        📭 No hay evidencias ni entregas registradas aún.<br>
-        <small style="font-size:0.8rem;">Abre cualquier actividad desde el Calendario o las Notas para registrar tu enlace de evidencia, fecha y plataforma.</small>
-      </div>
+    const emptyBox = document.createElement('div');
+    emptyBox.style.cssText = 'color:var(--mu);text-align:center;padding:50px 20px;';
+    emptyBox.innerHTML = `
+      📭 No hay evidencias ni entregas registradas aún.<br>
+      <small style="font-size:0.8rem;">Haz clic en el botón <strong>"＋ Registrar Nueva Entrega"</strong> arriba o abre cualquier actividad para registrar tu enlace de evidencia, fecha y plataforma.</small>
     `;
+    container.appendChild(emptyBox);
     return;
   }
 
@@ -907,14 +929,32 @@ async function saveInlineGrade(inputEl) {
 
 function renderRegistrationView() {
   const subPeriodSelect = document.getElementById('subject-period');
+  const subPeriodFilter = document.getElementById('subject-period-filter');
   if (subPeriodSelect) {
     subPeriodSelect.innerHTML = '<option value="">— Sin periodo asignado —</option>' +
       state.periods.map((p) => `<option value="${p.id}">${escapeHtml(p.name)} ${p.is_active === 0 ? '(Archivado)' : ''}</option>`).join('');
   }
+  if (subPeriodFilter) {
+    const currentVal = subPeriodFilter.value;
+    subPeriodFilter.innerHTML = '<option value="all">Todos los periodos</option>' +
+      state.periods.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    if (currentVal) subPeriodFilter.value = currentVal;
+  }
 
   const actSubSelect = document.getElementById('activity-subject');
+  const actSubFilter = document.getElementById('activity-subject-filter');
   if (actSubSelect) {
-    actSubSelect.innerHTML = state.subjects.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    const prevActSub = actSubSelect.value;
+    actSubSelect.innerHTML = state.subjects.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (Escala: ${s.total_grade_value || 100} pts)</option>`).join('');
+    if (prevActSub && state.subjects.some((s) => String(s.id) === String(prevActSub))) {
+      actSubSelect.value = prevActSub;
+    }
+  }
+  if (actSubFilter) {
+    const currentVal = actSubFilter.value;
+    actSubFilter.innerHTML = '<option value="all">Todas las asignaturas</option>' +
+      state.subjects.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    if (currentVal) actSubFilter.value = currentVal;
   }
 
   const summaryBox = document.getElementById('registration-summary');
@@ -931,56 +971,314 @@ function renderRegistrationView() {
 
   const periodList = document.getElementById('period-list');
   if (periodList) {
-    periodList.innerHTML = state.periods.map((p) => {
-      const isActive = p.is_active !== 0;
-      return `
-        <div class="subject-item-card" style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <strong>${escapeHtml(p.name)}</strong>
-              <span class="filter-chip on" style="font-size:0.65rem;color:${isActive ? 'var(--grn)' : 'var(--yel)'};">
-                ${isActive ? '🟢 En curso' : '📦 Archivado'}
-              </span>
+    if (!state.periods.length) {
+      periodList.innerHTML = '<div style="color:var(--mu);font-size:0.8rem;padding:8px 0;">No hay periodos registrados aún.</div>';
+    } else {
+      periodList.innerHTML = state.periods.map((p) => {
+        const isActive = p.is_active !== 0;
+        return `
+          <div class="subject-item-card" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <strong>${escapeHtml(p.name)}</strong>
+                <span class="filter-chip on" style="font-size:0.65rem;color:${isActive ? 'var(--grn)' : 'var(--yel)'};">
+                  ${isActive ? '🟢 En curso' : '📦 Archivado'}
+                </span>
+              </div>
+              <div style="font-size:0.72rem;color:var(--mu);">${escapeHtml(p.start_date || 'Sin inicio')} a ${escapeHtml(p.end_date || 'Sin fin')}</div>
             </div>
-            <div style="font-size:0.72rem;color:var(--mu);">${escapeHtml(p.start_date || 'Sin inicio')} a ${escapeHtml(p.end_date || 'Sin fin')}</div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button type="button" class="btn sm ghost" onclick="editPeriod(${p.id})" title="Editar datos del periodo">✏ Editar</button>
+              <button type="button" class="btn sm ${isActive ? 'yel' : 'grn'}" onclick="togglePeriodActive(${p.id})">
+                ${isActive ? '📦 Archivar' : '🟢 Activar'}
+              </button>
+              <button type="button" class="btn sm red" onclick="deletePeriod(${p.id})">🗑</button>
+            </div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <button type="button" class="btn sm ${isActive ? 'yel' : 'grn'}" onclick="togglePeriodActive(${p.id})">
-              ${isActive ? '📦 Archivar' : '🟢 Activar'}
-            </button>
-            <button type="button" class="btn sm red" onclick="deletePeriod(${p.id})">🗑</button>
-          </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    }
   }
 
   const subList = document.getElementById('subjects-list');
   if (subList) {
-    subList.innerHTML = state.subjects.map((s) => {
-      const isArchived = s.period_is_active === 0 || s.is_archived === 1;
-      return `
-        <div class="subject-item-card">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(s.color || '#3B82F6')};"></div>
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <strong>${escapeHtml(s.name)}</strong>
-                <span style="font-size:0.75rem;color:var(--mu);">${escapeHtml(s.code || 'S/C')}</span>
-                ${isArchived ? '<span class="filter-chip on" style="font-size:0.65rem;color:var(--yel);">📦 Archivado</span>' : ''}
+    const searchVal = (document.getElementById('subject-search-input')?.value || '').toLowerCase().trim();
+    const periodFilter = document.getElementById('subject-period-filter')?.value || 'all';
+
+    let filtered = state.subjects.filter((s) => {
+      if (periodFilter !== 'all' && String(s.period_id) !== periodFilter) return false;
+      if (searchVal) {
+        const matchName = (s.name || '').toLowerCase().includes(searchVal);
+        const matchCode = (s.code || '').toLowerCase().includes(searchVal);
+        const matchTeacher = (s.teacher || '').toLowerCase().includes(searchVal);
+        return matchName || matchCode || matchTeacher;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      subList.innerHTML = '<div style="color:var(--mu);font-size:0.8rem;padding:8px 0;">No hay asignaturas que coincidan con los criterios.</div>';
+    } else {
+      subList.innerHTML = filtered.map((s) => {
+        const isArchived = s.period_is_active === 0 || s.is_archived === 1;
+        const passVal = s.passing_grade_value !== undefined ? s.passing_grade_value : (asNumber(s.total_grade_value, 100) * 0.6);
+        return `
+          <div class="subject-item-card">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(s.color || '#3B82F6')};"></div>
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <strong>${escapeHtml(s.name)}</strong>
+                  <span style="font-size:0.75rem;color:var(--mu);">${escapeHtml(s.code || 'S/C')}</span>
+                  ${isArchived ? '<span class="filter-chip on" style="font-size:0.65rem;color:var(--yel);">📦 Archivado</span>' : ''}
+                </div>
+                <div style="font-size:0.72rem;color:var(--mu);">
+                  ${escapeHtml(s.teacher || 'Docente no asignado')} · Periodo: ${escapeHtml(s.period_name || 'Sin periodo')} · Escala: ${s.total_grade_value || 100} pts · <span style="color:var(--tx);font-weight:600;">Aprueba con: ${passVal} pts (${((passVal / (s.total_grade_value || 100)) * 100).toFixed(0)}%)</span>
+                </div>
               </div>
-              <div style="font-size:0.72rem;color:var(--mu);">${escapeHtml(s.teacher || 'Docente no asignado')} · Periodo: ${escapeHtml(s.period_name || 'Sin periodo')} · Escala: ${s.total_grade_value || 100} pts</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button type="button" class="btn sm ghost" onclick="editSubject(${s.id})" title="Editar datos de la asignatura y docente">✏ Editar</button>
+              <button type="button" class="btn sm ${s.is_archived === 1 ? 'grn' : 'yel'}" onclick="toggleSubjectArchive(${s.id})" title="${s.is_archived === 1 ? 'Desarchivar' : 'Archivar individualmente'}">
+                ${s.is_archived === 1 ? '🟢 Desarchivar' : '📦'}
+              </button>
+              <button type="button" class="btn sm red" onclick="deleteSubject(${s.id})">🗑</button>
             </div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <button type="button" class="btn sm ${s.is_archived === 1 ? 'grn' : 'yel'}" onclick="toggleSubjectArchive(${s.id})" title="${s.is_archived === 1 ? 'Desarchivar' : 'Archivar individualmente'}">
-              ${s.is_archived === 1 ? '🟢 Desarchivar' : '📦'}
-            </button>
-            <button type="button" class="btn sm red" onclick="deleteSubject(${s.id})">🗑</button>
+        `;
+      }).join('');
+    }
+  }
+
+  const actList = document.getElementById('activities-list');
+  if (actList) {
+    const actSearch = (document.getElementById('activity-search-input')?.value || '').toLowerCase().trim();
+    const actSubFil = document.getElementById('activity-subject-filter')?.value || 'all';
+
+    let allActs = [];
+    state.subjects.forEach((s) => {
+      (s.activities || []).forEach((a) => {
+        allActs.push({ ...a, subject_name: s.name, subject_color: s.color || '#3B82F6', subject_total: s.total_grade_value || 100 });
+      });
+    });
+
+    let filteredActs = allActs.filter((a) => {
+      if (actSubFil !== 'all' && String(a.subject_id) !== actSubFil) return false;
+      if (actSearch) {
+        const matchTitle = (a.title || '').toLowerCase().includes(actSearch);
+        const matchSub = (a.subject_name || '').toLowerCase().includes(actSearch);
+        return matchTitle || matchSub;
+      }
+      return true;
+    });
+
+    if (!filteredActs.length) {
+      actList.innerHTML = '<div style="color:var(--mu);font-size:0.8rem;padding:8px 0;">No hay actividades registradas con los filtros seleccionados.</div>';
+    } else {
+      actList.innerHTML = filteredActs.map((a) => {
+        const hasGrade = a.grade_obtained !== null && a.grade_obtained !== '';
+        const isDone = !!(a.completed_date || a.submitted_at || a.status === 'aprobado' || a.status === 'presentado');
+        let statusBadge = '<span style="font-size:0.68rem;color:var(--mu);">🟡 Pendiente</span>';
+        if (hasGrade) statusBadge = `<span style="font-size:0.68rem;color:var(--grn);font-weight:600;">⭐ Nota: ${a.grade_obtained}/${a.grade_total || 100}</span>`;
+        else if (isDone) statusBadge = '<span style="font-size:0.68rem;color:var(--c1);font-weight:600;">📨 Entregada</span>';
+
+        return `
+          <div class="subject-item-card">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:10px;height:10px;border-radius:2px;background:${escapeHtml(a.subject_color)};"></div>
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <strong>${escapeHtml(a.title)}</strong>
+                  <span class="filter-chip on" style="font-size:0.65rem;">${escapeHtml(a.activity_type || 'Tarea')}</span>
+                  ${statusBadge}
+                </div>
+                <div style="font-size:0.72rem;color:var(--mu);">
+                  Materia: <strong>${escapeHtml(a.subject_name)}</strong> · Peso: ${a.weight || 0}% · Puntaje máx: ${a.grade_total || 100} pts · Vence: ${escapeHtml(a.due_date || 'Sin fecha')}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button type="button" class="btn sm ghost" onclick="editActivity(${a.id}, ${a.subject_id})" title="Editar actividad, ponderación o fecha">✏ Editar</button>
+              <button type="button" class="btn sm red" onclick="deleteActivity(${a.id}, ${a.subject_id})">🗑</button>
+            </div>
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// FUNCIONES DE EDICIÓN Y CANCELACIÓN EN REGISTRO
+// ─────────────────────────────────────────────────────────────
+
+function editPeriod(periodId) {
+  const period = state.periods.find((p) => p.id === Number(periodId));
+  if (!period) return;
+
+  document.getElementById('period-id').value = period.id;
+  document.getElementById('period-name').value = period.name || '';
+  document.getElementById('period-start').value = period.start_date || '';
+  document.getElementById('period-end').value = period.end_date || '';
+
+  const titleEl = document.getElementById('period-form-title');
+  const btnEl = document.getElementById('period-submit-btn');
+  const cancelBtn = document.getElementById('cancel-period-edit');
+
+  if (titleEl) titleEl.textContent = '✏ Editar periodo académico';
+  if (btnEl) btnEl.textContent = 'Actualizar periodo';
+  if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+  document.getElementById('period-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelPeriodEdit() {
+  document.getElementById('period-id').value = '';
+  document.getElementById('period-form')?.reset();
+
+  const titleEl = document.getElementById('period-form-title');
+  const btnEl = document.getElementById('period-submit-btn');
+  const cancelBtn = document.getElementById('cancel-period-edit');
+
+  if (titleEl) titleEl.textContent = 'Nuevo periodo académico';
+  if (btnEl) btnEl.textContent = 'Guardar periodo';
+  if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
+function editSubject(subjectId) {
+  const subject = state.subjects.find((s) => s.id === Number(subjectId));
+  if (!subject) return;
+
+  document.getElementById('subject-id').value = subject.id;
+  document.getElementById('subject-name').value = subject.name || '';
+  document.getElementById('subject-code').value = subject.code || '';
+  document.getElementById('subject-teacher').value = subject.teacher || '';
+  document.getElementById('subject-period').value = subject.period_id || '';
+  document.getElementById('subject-total').value = subject.total_grade_value || 100;
+  document.getElementById('subject-passing').value = subject.passing_grade_value !== undefined ? subject.passing_grade_value : ((subject.total_grade_value || 100) * 0.6);
+  document.getElementById('subject-color').value = subject.color || '#3B82F6';
+  document.getElementById('subject-notes').value = subject.notes || '';
+
+  const titleEl = document.getElementById('subject-form-title');
+  const btnEl = document.getElementById('subject-submit-btn');
+  const cancelBtn = document.getElementById('cancel-subject-edit');
+
+  if (titleEl) titleEl.textContent = '✏ Editar asignatura y docente';
+  if (btnEl) btnEl.textContent = 'Actualizar asignatura';
+  if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+  document.getElementById('subject-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelSubjectEdit() {
+  document.getElementById('subject-id').value = '';
+  document.getElementById('subject-form')?.reset();
+  const colorInput = document.getElementById('subject-color');
+  if (colorInput) colorInput.value = '#3B82F6';
+  const totalInput = document.getElementById('subject-total');
+  if (totalInput) totalInput.value = '100';
+  const passingInput = document.getElementById('subject-passing');
+  if (passingInput) passingInput.value = '60';
+
+  const titleEl = document.getElementById('subject-form-title');
+  const btnEl = document.getElementById('subject-submit-btn');
+  const cancelBtn = document.getElementById('cancel-subject-edit');
+
+  if (titleEl) titleEl.textContent = 'Nueva asignatura';
+  if (btnEl) btnEl.textContent = 'Guardar asignatura';
+  if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
+function editActivity(activityId, subjectId) {
+  const sub = state.subjects.find((s) => s.id === Number(subjectId));
+  const act = sub ? sub.activities.find((a) => a.id === Number(activityId)) : null;
+  if (!act) return;
+
+  document.getElementById('activity-id').value = act.id;
+  document.getElementById('activity-subject').value = subjectId;
+  document.getElementById('activity-title').value = act.title || '';
+  document.getElementById('activity-type').value = act.activity_type || 'Tarea';
+  document.getElementById('activity-due-date').value = act.due_date || '';
+  document.getElementById('activity-weight').value = act.weight || 0;
+  document.getElementById('activity-grade-total').value = act.grade_total || 100;
+  document.getElementById('activity-grade').value = (act.grade_obtained !== null && act.grade_obtained !== undefined) ? act.grade_obtained : '';
+
+  const titleEl = document.getElementById('activity-form-title');
+  const btnEl = document.getElementById('activity-submit-btn');
+  const cancelBtn = document.getElementById('cancel-activity-edit');
+
+  if (titleEl) titleEl.textContent = '✏ Editar actividad o evaluación';
+  if (btnEl) btnEl.textContent = 'Actualizar actividad';
+  if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+  document.getElementById('activity-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelActivityEdit() {
+  document.getElementById('activity-id').value = '';
+  document.getElementById('activity-form')?.reset();
+  const weightInput = document.getElementById('activity-weight');
+  if (weightInput) weightInput.value = '20';
+  const totalInput = document.getElementById('activity-grade-total');
+  if (totalInput) totalInput.value = '100';
+
+  const titleEl = document.getElementById('activity-form-title');
+  const btnEl = document.getElementById('activity-submit-btn');
+  const cancelBtn = document.getElementById('cancel-activity-edit');
+
+  if (titleEl) titleEl.textContent = 'Nueva actividad o evaluación';
+  if (btnEl) btnEl.textContent = 'Guardar actividad';
+  if (cancelBtn) cancelBtn.classList.add('hidden');
+}
+
+async function deleteActivity(activityId, subjectId) {
+  const ok = await confirmAction('¿Eliminar esta actividad evaluativa?', 'Eliminar actividad');
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/api/subjects/${subjectId}/activities/${activityId}`, { method: 'DELETE' });
+    showToast('Actividad eliminada correctamente.', 'success');
+    loadAllData();
+  } catch (err) {
+    showToast('Error al eliminar actividad: ' + err.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SINCRONIZACIÓN AUTOMÁTICA DE PUNTAJE MÁXIMO Y PESO (%)
+// ─────────────────────────────────────────────────────────────
+
+function syncActivityWeightFromGradeTotal() {
+  const subSelect = document.getElementById('activity-subject');
+  const gradeTotalInput = document.getElementById('activity-grade-total');
+  const weightInput = document.getElementById('activity-weight');
+  if (!subSelect || !gradeTotalInput || !weightInput) return;
+
+  const subId = Number(subSelect.value);
+  const sub = state.subjects.find((s) => s.id === subId);
+  const subTotal = sub ? asNumber(sub.total_grade_value, 100) : 100;
+  const gradeTotal = parseFloat(gradeTotalInput.value);
+
+  if (!isNaN(gradeTotal) && gradeTotal > 0 && subTotal > 0) {
+    const calcWeight = (gradeTotal / subTotal) * 100;
+    weightInput.value = Number.isInteger(calcWeight) ? calcWeight : parseFloat(calcWeight.toFixed(2));
+  }
+}
+
+function syncActivityGradeTotalFromWeight() {
+  const subSelect = document.getElementById('activity-subject');
+  const gradeTotalInput = document.getElementById('activity-grade-total');
+  const weightInput = document.getElementById('activity-weight');
+  if (!subSelect || !gradeTotalInput || !weightInput) return;
+
+  const subId = Number(subSelect.value);
+  const sub = state.subjects.find((s) => s.id === subId);
+  const subTotal = sub ? asNumber(sub.total_grade_value, 100) : 100;
+  const weightVal = parseFloat(weightInput.value);
+
+  if (!isNaN(weightVal) && weightVal >= 0 && subTotal > 0) {
+    const calcGradeTotal = (weightVal / 100) * subTotal;
+    gradeTotalInput.value = Number.isInteger(calcGradeTotal) ? calcGradeTotal : parseFloat(calcGradeTotal.toFixed(2));
   }
 }
 
@@ -1316,12 +1614,59 @@ async function removeModalGrade() {
 // MODAL 2: FORMULARIO DE ENTREGA
 // ─────────────────────────────────────────────────────────────
 
+function openNewEntregaModal() {
+  const selectWrap = document.getElementById('efSelectActWrap');
+  const actSelect = document.getElementById('efActSelect');
+
+  let optionsHtml = '<option value="">— Selecciona la actividad a entregar —</option>';
+  state.subjects.forEach((s) => {
+    const acts = s.activities || [];
+    if (acts.length > 0) {
+      optionsHtml += `<optgroup label="${escapeHtml(s.name)}">`;
+      acts.forEach((a) => {
+        const hasGrade = a.grade_obtained !== null && a.grade_obtained !== '';
+        const isDone = !!(a.completed_date || a.submitted_at || a.status === 'aprobado' || a.status === 'presentado');
+        const statusTxt = hasGrade ? '⭐ Calificada' : (isDone ? '📨 Entregada' : '🟡 Pendiente');
+        optionsHtml += `<option value="${s.id}_${a.id}">${escapeHtml(a.title)} (${escapeHtml(a.activity_type || 'Tarea')} - ${a.weight || 0}%) [${statusTxt}]</option>`;
+      });
+      optionsHtml += `</optgroup>`;
+    }
+  });
+
+  if (actSelect) {
+    actSelect.innerHTML = optionsHtml;
+  }
+  if (selectWrap) {
+    selectWrap.style.display = 'block';
+  }
+
+  document.getElementById('entFTit').textContent = 'Registrar nueva entrega';
+  document.getElementById('efFecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('efPlat').value = '';
+  document.getElementById('efLink').value = '';
+  document.getElementById('efNotas').value = '';
+
+  const chk = document.getElementById('efHasInstantGrade');
+  const wrap = document.getElementById('efInstantGradeWrap');
+  const valInput = document.getElementById('efInstantGradeVal');
+  if (chk) chk.checked = false;
+  if (wrap) wrap.style.display = 'none';
+  if (valInput) valInput.value = '';
+
+  document.getElementById('entOv').classList.add('op');
+}
+
 function openEntModal(isEdit = false) {
+  const selectWrap = document.getElementById('efSelectActWrap');
+  if (selectWrap) {
+    selectWrap.style.display = 'none';
+  }
+
   const sub = state.subjects.find((s) => s.id === Number(state.selectedSubjectId));
   const act = sub ? sub.activities.find((a) => a.id === Number(state.selectedActivityId)) : null;
 
   document.getElementById('entFTit').textContent = isEdit ? 'Editar evidencia de entrega' : 'Registrar evidencia de entrega';
-  document.getElementById('efFecha').value = act?.submitted_at || new Date().toISOString().slice(0, 10);
+  document.getElementById('efFecha').value = act?.submitted_at || act?.completed_date || new Date().toISOString().slice(0, 10);
   document.getElementById('efPlat').value = act?.platform || '';
   document.getElementById('efLink').value = act?.submission_link || '';
   document.getElementById('efNotas').value = act?.feedback_notes || '';
@@ -1341,8 +1686,26 @@ function openEntModal(isEdit = false) {
 }
 
 async function saveEntregaModal() {
-  const subId = state.selectedSubjectId;
-  const actId = state.selectedActivityId;
+  const selectWrap = document.getElementById('efSelectActWrap');
+  let subId = state.selectedSubjectId;
+  let actId = state.selectedActivityId;
+
+  if (selectWrap && selectWrap.style.display !== 'none') {
+    const actSelectVal = document.getElementById('efActSelect')?.value;
+    if (!actSelectVal) {
+      showToast('Por favor selecciona una asignatura y actividad.', 'warning');
+      return;
+    }
+    const [sId, aId] = actSelectVal.split('_').map(Number);
+    subId = sId;
+    actId = aId;
+  }
+
+  if (!subId || !actId) {
+    showToast('Actividad no seleccionada.', 'warning');
+    return;
+  }
+
   const fecha = document.getElementById('efFecha').value;
   const plat = document.getElementById('efPlat').value.trim();
   const link = document.getElementById('efLink').value.trim();
@@ -1372,8 +1735,10 @@ async function saveEntregaModal() {
     });
     document.getElementById('entOv').classList.remove('op');
     setUnsavedChanges(false);
-    showToast(gradeObtained !== null ? 'Entrega y calificación registrada.' : 'Evidencia de entrega registrada (en espera de nota).', 'success');
-    openActModal(actId, subId);
+    showToast(gradeObtained !== null ? 'Entrega y calificación registrada.' : 'Evidencia de entrega guardada correctamente.', 'success');
+    if (state.selectedActivityId && state.selectedSubjectId) {
+      openActModal(actId, subId);
+    }
     loadAllData();
   } catch (err) {
     showToast('Error al guardar entrega: ' + err.message, 'error');
@@ -1731,6 +2096,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(formId)?.addEventListener('input', () => setUnsavedChanges(true));
   });
 
+  // Cancelar edición en formularios de Registro
+  document.getElementById('cancel-period-edit')?.addEventListener('click', cancelPeriodEdit);
+  document.getElementById('cancel-subject-edit')?.addEventListener('click', cancelSubjectEdit);
+  document.getElementById('cancel-activity-edit')?.addEventListener('click', cancelActivityEdit);
+
+  // Sincronización automática de peso y puntaje máximo de actividades
+  document.getElementById('activity-subject')?.addEventListener('change', syncActivityWeightFromGradeTotal);
+  document.getElementById('activity-grade-total')?.addEventListener('input', syncActivityWeightFromGradeTotal);
+  document.getElementById('activity-weight')?.addEventListener('input', syncActivityGradeTotalFromWeight);
+
+  // Filtros y búsquedas en tiempo real en Registro
+  document.getElementById('subject-search-input')?.addEventListener('input', renderRegistrationView);
+  document.getElementById('subject-period-filter')?.addEventListener('change', renderRegistrationView);
+  document.getElementById('activity-search-input')?.addEventListener('input', renderRegistrationView);
+  document.getElementById('activity-subject-filter')?.addEventListener('change', renderRegistrationView);
+
   // Formulario de Configuración
   document.getElementById('settings-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1745,55 +2126,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Formulario de Periodos
+  // Formulario de Periodos (Crear o Actualizar)
   document.getElementById('period-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('period-id').value;
     const name = document.getElementById('period-name').value.trim();
     const start_date = document.getElementById('period-start').value;
     const end_date = document.getElementById('period-end').value;
 
     try {
-      await apiRequest('/api/periods', {
-        method: 'POST',
-        body: JSON.stringify({ name, start_date, end_date, is_active: 1 })
-      });
-      document.getElementById('period-form').reset();
+      if (id) {
+        await apiRequest(`/api/periods/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name, start_date, end_date })
+        });
+        cancelPeriodEdit();
+        showToast('Periodo académico actualizado correctamente.', 'success');
+      } else {
+        await apiRequest('/api/periods', {
+          method: 'POST',
+          body: JSON.stringify({ name, start_date, end_date, is_active: 1 })
+        });
+        document.getElementById('period-form').reset();
+        showToast('Periodo registrado exitosamente.', 'success');
+      }
       setUnsavedChanges(false);
-      showToast('Periodo registrado exitosamente.', 'success');
       loadAllData();
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   });
 
-  // Formulario de Asignaturas
+  // Formulario de Asignaturas (Crear o Actualizar)
   document.getElementById('subject-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('subject-id').value;
     const name = document.getElementById('subject-name').value.trim();
     const code = document.getElementById('subject-code').value.trim();
     const teacher = document.getElementById('subject-teacher').value.trim();
     const period_id = document.getElementById('subject-period').value;
     const total_grade_value = document.getElementById('subject-total').value;
+    const passing_grade_value = document.getElementById('subject-passing').value;
     const color = document.getElementById('subject-color').value;
     const notes = document.getElementById('subject-notes').value.trim();
 
     try {
-      await apiRequest('/api/subjects', {
-        method: 'POST',
-        body: JSON.stringify({ name, code, teacher, period_id, total_grade_value, color, notes })
-      });
-      document.getElementById('subject-form').reset();
+      if (id) {
+        await apiRequest(`/api/subjects/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name, code, teacher, period_id, total_grade_value, passing_grade_value, color, notes })
+        });
+        cancelSubjectEdit();
+        showToast('Asignatura actualizada correctamente.', 'success');
+      } else {
+        await apiRequest('/api/subjects', {
+          method: 'POST',
+          body: JSON.stringify({ name, code, teacher, period_id, total_grade_value, passing_grade_value, color, notes })
+        });
+        cancelSubjectEdit();
+        showToast('Asignatura registrada correctamente.', 'success');
+      }
       setUnsavedChanges(false);
-      showToast('Asignatura registrada correctamente.', 'success');
       loadAllData();
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   });
 
-  // Formulario de Actividades
+  // Formulario de Actividades (Crear o Actualizar)
   document.getElementById('activity-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('activity-id').value;
     const subject_id = document.getElementById('activity-subject').value;
     const title = document.getElementById('activity-title').value.trim();
     const activity_type = document.getElementById('activity-type').value;
@@ -1803,22 +2206,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const grade_obtained = grade_obtained_raw !== '' ? Number(grade_obtained_raw) : null;
     const grade_total = document.getElementById('activity-grade-total').value;
 
+    if (!subject_id) {
+      showToast('Debes seleccionar una asignatura.', 'warning');
+      return;
+    }
+
     try {
-      await apiRequest(`/api/subjects/${subject_id}/activities`, {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          activity_type,
-          due_date,
-          weight,
-          grade_obtained,
-          grade_total,
-          status: grade_obtained !== null ? 'aprobado' : 'pendiente'
-        })
-      });
-      document.getElementById('activity-form').reset();
+      if (id) {
+        await apiRequest(`/api/subjects/${subject_id}/activities/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            title,
+            activity_type,
+            due_date,
+            weight,
+            grade_obtained,
+            grade_total,
+            status: grade_obtained !== null ? 'aprobado' : 'pendiente'
+          })
+        });
+        cancelActivityEdit();
+        showToast('Actividad actualizada correctamente.', 'success');
+      } else {
+        await apiRequest(`/api/subjects/${subject_id}/activities`, {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            activity_type,
+            due_date,
+            weight,
+            grade_obtained,
+            grade_total,
+            status: grade_obtained !== null ? 'aprobado' : 'pendiente'
+          })
+        });
+        cancelActivityEdit();
+        showToast(grade_obtained !== null ? 'Actividad y calificación registrada.' : 'Actividad planeada registrada.', 'success');
+      }
       setUnsavedChanges(false);
-      showToast(grade_obtained !== null ? 'Actividad y calificación registrada.' : 'Actividad planeada registrada.', 'success');
       loadAllData();
     } catch (err) {
       showToast('Error: ' + err.message, 'error');

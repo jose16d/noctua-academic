@@ -96,6 +96,7 @@ function initializeDatabase() {
       teacher TEXT,
       period_id INTEGER,
       total_grade_value REAL NOT NULL DEFAULT 100,
+      passing_grade_value REAL NOT NULL DEFAULT 60,
       notes TEXT,
       color TEXT DEFAULT '#3B82F6',
       is_archived INTEGER NOT NULL DEFAULT 0,
@@ -149,7 +150,7 @@ function initializeDatabase() {
     app_settings: ['id', 'university_name'],
     academic_periods: ['id', 'name', 'start_date', 'end_date', 'is_active', 'created_at'],
     categories: ['id', 'name', 'color'],
-    subjects: ['id', 'name', 'code', 'teacher', 'period_id', 'total_grade_value', 'notes', 'color', 'is_archived', 'created_at'],
+    subjects: ['id', 'name', 'code', 'teacher', 'period_id', 'total_grade_value', 'passing_grade_value', 'notes', 'color', 'is_archived', 'created_at'],
     subject_activities: ['id', 'subject_id', 'title', 'activity_type', 'due_date', 'submitted_at', 'completed_date', 'grade_obtained', 'grade_total', 'weight', 'status', 'platform', 'submission_link', 'feedback_notes', 'created_at'],
     calendar_events: ['id', 'title', 'category_id', 'event_date', 'event_time', 'location', 'description', 'link', 'created_at']
   };
@@ -165,6 +166,8 @@ function initializeDatabase() {
           db.exec('ALTER TABLE subjects ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
         } else if (tableName === 'subjects' && columnName === 'period_id') {
           db.exec('ALTER TABLE subjects ADD COLUMN period_id INTEGER');
+        } else if (tableName === 'subjects' && columnName === 'passing_grade_value') {
+          db.exec('ALTER TABLE subjects ADD COLUMN passing_grade_value REAL NOT NULL DEFAULT 60');
         } else if (tableName === 'subjects' && columnName === 'color') {
           db.exec('ALTER TABLE subjects ADD COLUMN color TEXT DEFAULT "#3B82F6"');
         } else if (tableName === 'subject_activities' && columnName === 'grade_total') {
@@ -262,8 +265,11 @@ function getSubjectMetrics(subjectId) {
   const finalGradeValue = subjectMax ? (finalGradePercent / 100) * subjectMax : 0;
   const grade5Scale = (finalGradePercent / 100) * 5.0; // Escala 0 a 5.0 estándar universitaria
 
-  // Cálculo de puntaje requerido para aprobar (por defecto meta del 60% del peso total)
-  const passingThresholdPercent = 60;
+  // Cálculo de puntaje requerido para aprobar personalizado por asignatura (por defecto 60% de la escala)
+  const passingScore = (subject.passing_grade_value !== null && subject.passing_grade_value !== undefined && subject.passing_grade_value !== '')
+    ? asNumber(subject.passing_grade_value, subjectMax * 0.6)
+    : (subjectMax * 0.6);
+  const passingThresholdPercent = subjectMax > 0 ? (passingScore / subjectMax) * 100 : 60;
   const targetPoints = (passingThresholdPercent / 100) * (totalWeight || 100);
   const remainingWeight = Math.max(0, (totalWeight || 100) - completedWeight);
   const pointsNeeded = Math.max(0, targetPoints - scoreWeighted);
@@ -271,6 +277,7 @@ function getSubjectMetrics(subjectId) {
 
   return {
     ...subject,
+    passing_grade_value: passingScore,
     activities,
     weight_total: totalWeight,
     completed_weight: completedWeight,
@@ -548,21 +555,27 @@ app.get('/api/subjects/:id', (req, res) => {
 });
 
 app.post('/api/subjects', (req, res) => {
-  const { name, code, teacher, period_id, total_grade_value, notes, color } = req.body || {};
+  const { name, code, teacher, period_id, total_grade_value, passing_grade_value, notes, color } = req.body || {};
 
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'El nombre de la asignatura es requerido.' });
   }
 
+  const totalMax = asNumber(total_grade_value, 100);
+  const passVal = passing_grade_value !== undefined && passing_grade_value !== '' && passing_grade_value !== null
+    ? asNumber(passing_grade_value, totalMax * 0.6)
+    : (totalMax * 0.6);
+
   const result = db.prepare(`
-    INSERT INTO subjects (name, code, teacher, period_id, total_grade_value, notes, color)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO subjects (name, code, teacher, period_id, total_grade_value, passing_grade_value, notes, color)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     String(name).trim(),
     code ? String(code).trim() : null,
     teacher ? String(teacher).trim() : null,
     period_id ? Number(period_id) : null,
-    asNumber(total_grade_value, 100),
+    totalMax,
+    passVal,
     notes ? String(notes).trim() : null,
     color || '#3B82F6'
   );
@@ -577,22 +590,28 @@ app.put('/api/subjects/:id', (req, res) => {
     return res.status(404).json({ error: 'Asignatura no encontrada.' });
   }
 
-  const { name, code, teacher, period_id, total_grade_value, notes, color } = req.body || {};
+  const { name, code, teacher, period_id, total_grade_value, passing_grade_value, notes, color } = req.body || {};
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'El nombre de la asignatura es requerido.' });
   }
 
+  const nextTotal = total_grade_value !== undefined && total_grade_value !== '' ? asNumber(total_grade_value, existing.total_grade_value) : existing.total_grade_value;
+  const nextPassing = passing_grade_value !== undefined && passing_grade_value !== ''
+    ? asNumber(passing_grade_value, nextTotal * 0.6)
+    : (existing.passing_grade_value !== undefined ? existing.passing_grade_value : nextTotal * 0.6);
+
   db.prepare(`
     UPDATE subjects
-    SET name = ?, code = ?, teacher = ?, period_id = ?, total_grade_value = ?, notes = ?, color = ?
+    SET name = ?, code = ?, teacher = ?, period_id = ?, total_grade_value = ?, passing_grade_value = ?, notes = ?, color = ?
     WHERE id = ?
   `).run(
     String(name).trim(),
-    code ? String(code).trim() : null,
-    teacher ? String(teacher).trim() : null,
-    period_id ? Number(period_id) : null,
-    asNumber(total_grade_value, 100),
-    notes ? String(notes).trim() : null,
+    code !== undefined ? (code ? String(code).trim() : null) : existing.code,
+    teacher !== undefined ? (teacher ? String(teacher).trim() : null) : existing.teacher,
+    period_id !== undefined ? (period_id ? Number(period_id) : null) : existing.period_id,
+    nextTotal,
+    nextPassing,
+    notes !== undefined ? (notes ? String(notes).trim() : null) : existing.notes,
     color || existing.color || '#3B82F6',
     subjectId
   );
@@ -1005,9 +1024,9 @@ app.get('/api/export', (req, res) => {
   const events = db.prepare('SELECT * FROM calendar_events').all();
 
   const payload = {
-    version: '2.0.0',
+    version: '2.1.0',
     _app: 'noctua',
-    _version: '2.0.0',
+    _version: '2.1.0',
     exported_at: new Date().toISOString(),
     university_name: getUniversityName(),
     periods,
@@ -1104,8 +1123,8 @@ app.post('/api/import', (req, res) => {
 
     // 3. Importar asignaturas
     const insertSubject = db.prepare(`
-      INSERT INTO subjects (name, code, teacher, period_id, total_grade_value, notes, color)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO subjects (name, code, teacher, period_id, total_grade_value, passing_grade_value, notes, color)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     subjects.forEach((s) => {
@@ -1120,7 +1139,9 @@ app.post('/api/import', (req, res) => {
         const existing = db.prepare('SELECT id FROM subjects WHERE name = ?').get(s.name);
         let currentSubId = existing ? existing.id : null;
         if (!existing) {
-          const resSub = insertSubject.run(s.name, s.code || null, s.teacher || null, mappedPeriodId, asNumber(s.total_grade_value, 100), s.notes || null, s.color || '#3B82F6');
+          const totalVal = asNumber(s.total_grade_value, 100);
+          const passVal = s.passing_grade_value !== undefined && s.passing_grade_value !== null ? asNumber(s.passing_grade_value, totalVal * 0.6) : (totalVal * 0.6);
+          const resSub = insertSubject.run(s.name, s.code || null, s.teacher || null, mappedPeriodId, totalVal, passVal, s.notes || null, s.color || '#3B82F6');
           currentSubId = resSub.lastInsertRowid;
         }
 

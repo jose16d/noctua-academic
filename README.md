@@ -1,12 +1,23 @@
-# 🦉 Noctua Academic - Suite de Control y Productividad Universitaria
+# 🦉 Noctua Academic - Suite de Control y Productividad Universitaria (v2.1.0)
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-blue.svg)](https://expressjs.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-blueviolet.svg)](https://www.sqlite.org/)
 [![Tests](https://img.shields.io/badge/Tests-10%2F10%20Passing-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Version-v2.1.0-blue.svg)]()
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 **Noctua** es una plataforma web completa, rápida, autónoma y privada para el control académico universitario. Inspirada en el mochuelo de Atenea como símbolo universal del conocimiento y el rigor académico, permite planificar periodos académicos, simular y calcular calificaciones en escala `0.0 a 5.0`, adjuntar evidencias de entrega (Drive, GitHub, OneDrive, Teams), generar reportes en **Excel** y **PDF**, y consultar calendarios con alertas de urgencia temporal, respaldado por una base de datos local SQLite de alto rendimiento.
+
+---
+
+## 🌟 Novedades de la Versión 2.1.0
+
+- **✏️ Edición Completa y Retroactiva:** Modifica en cualquier momento docentes, nombres de asignaturas, códigos, colores, periodos y actividades ya registradas previamente.
+- **🎯 Puntaje Aprobatorio Personalizable por Materia:** Define con qué puntaje o nota exacta se aprueba cada asignatura (ej. 60 pts de 100, 300 pts de 500, etc.). El simulador de aprobación y cálculo de puntos faltantes se ajusta automáticamente a dicha meta.
+- **⚡ Sincronización Automática de Ponderaciones:** Al ingresar el puntaje máximo de una actividad, su peso porcentual (%) se recalcula al instante según la escala de la materia (y viceversa).
+- **📨 Registro Rápido de Entregas:** Botón `＋ Registrar Nueva Entrega` en la pestaña de Entregas con selector desplegable de actividades y formulario interactivo.
+- **🛡️ Retrocompatibilidad Total:** Migración no destructiva de SQLite (`data/university.db`) e importación de respaldos JSON creados con versiones previas.
 
 ---
 
@@ -15,7 +26,7 @@
 ### 📊 Gestión de Notas y Simulación Académica
 - **Escala de Calificación Universitaria:** Conversión automática y proyección en escala `0.0 a 5.0`.
 - **Edición en Línea (*Inline Editing*):** Digita tus notas directamente en la tabla y presiona `Enter` para actualizar tu promedio al instante.
-- **Simulador de Aprobación:** Te indica si vas aprobando (`≥ 3.0 / 5.0`) y cuánto puntaje exacto necesitas en las evaluaciones restantes.
+- **Simulador de Aprobación Dinámico:** Te indica si vas aprobando (`≥ 3.0 / 5.0`) y cuánto puntaje exacto necesitas en las evaluaciones restantes con base en el valor de aprobación personalizado.
 - **Ciclo de Vida de Evaluaciones:**
   - `🟡 Pendiente`: Planificación de actividades sin exigir nota previa.
   - `📨 Entregada`: Registro de evidencias y fecha de entrega (en espera de calificación docente).
@@ -40,13 +51,14 @@
 ```text
 noctua-academic/
 ├── data/
-│   └── university.db       # Base de datos SQLite local (modo WAL)
+│   └── university.db       # Base de datos SQLite local (modo WAL con migraciones automáticas)
 ├── public/                 # Interfaz de usuario Single Page Application (SPA)
 │   ├── index.html          # Estructura semántica, modales y plantilla PDF
 │   ├── styles.css          # Variables CSS, diseño responsivo y reglas @media print
 │   └── app.js              # Lógica de cliente, modales, validaciones y exportaciones
 ├── test/
 │   └── api.test.js         # Suite de 10 pruebas unitarias e integración con node:test
+├── portable-app/           # Espejo de ejecución portable independiente
 ├── server.js               # Servidor Express, API REST, SQLite y reportes Excel
 ├── package.json            # Metadatos del proyecto y scripts
 ├── README.md               # Documentación general en español
@@ -97,8 +109,6 @@ Noctua incluye lanzadores integrados para ejecutarse como una **aplicación de e
 - **`Noctua.vbs`**: Lanzador silencioso en segundo plano.
 - **`Cerrar Noctua.bat`**: Detiene cualquier instancia activa de Noctua de forma segura.
 
-> 💡 **Descarga directa:** Puedes descargar el archivo compilado `Noctua-Academic-v2.0.0-Portable-Windows.zip` desde la sección de [Releases de GitHub](https://github.com/jose16d/noctua-academic/releases) para usar la aplicación sin necesidad de configurar Node.js manualmente.
-
 ---
 
 ## 🧪 Ejecución de Pruebas Automatizadas
@@ -109,17 +119,21 @@ El proyecto cuenta con cobertura completa usando el ejecutor nativo de Node.js:
 npm test
 ```
 
-**Validaciones incluidas (10 de 10 tests):**
-1. Configuración institucional y nombres de universidad.
-2. Operaciones CRUD completas de periodos académicos.
-3. Validación de unicidad de categorías.
-4. CRUD de asignaturas y actividades con actualización parcial segura.
-5. Calendario unificado de actividades y eventos académicos.
-6. Exportación de respaldo completo en JSON.
-7. Importación y resolución de claves foráneas en modos *Merge* y *Replace*.
-8. Alternancia de estado y archivado de semestres (`PATCH /api/periods/:id/toggle-status`).
-9. Archivado individual de asignaturas (`PATCH /api/subjects/:id/toggle-archive`).
-10. Generación de planilla Excel con BOM UTF-8 (`GET /api/reports/excel`).
+---
+
+## 🐙 Comandos Git para Publicación y Fusión
+
+### 1. Subir la rama con las modificaciones a GitHub:
+```bash
+git push -u origin feature/v2.1.0-registro-edicion-entregas
+```
+
+### 2. Fusionar los cambios en la rama principal (`main`):
+```bash
+git checkout main
+git merge feature/v2.1.0-registro-edicion-entregas
+git push origin main
+```
 
 ---
 
