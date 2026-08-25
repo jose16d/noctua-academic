@@ -2096,6 +2096,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(formId)?.addEventListener('input', () => setUnsavedChanges(true));
   });
 
+  // Botón directo de registrar nueva entrega en el header
+  document.getElementById('btnHeaderNewEntrega')?.addEventListener('click', openNewEntregaModal);
+
+  // Cambio de actividad en selector de entrega directa
+  document.getElementById('efActSelect')?.addEventListener('change', function () {
+    const val = this.value;
+    if (!val) return;
+    const [sId, aId] = val.split('_').map(Number);
+    const sub = state.subjects.find((s) => s.id === sId);
+    const act = sub ? sub.activities.find((a) => a.id === aId) : null;
+    if (act) {
+      document.getElementById('efFecha').value = act.submitted_at || act.completed_date || new Date().toISOString().slice(0, 10);
+      document.getElementById('efPlat').value = act.platform || '';
+      document.getElementById('efLink').value = act.submission_link || '';
+      document.getElementById('efNotas').value = act.feedback_notes || '';
+      const hasGrade = act.grade_obtained !== null && act.grade_obtained !== undefined && act.grade_obtained !== '';
+      const chk = document.getElementById('efHasInstantGrade');
+      const wrap = document.getElementById('efInstantGradeWrap');
+      const valInput = document.getElementById('efInstantGradeVal');
+      if (chk) chk.checked = hasGrade;
+      if (wrap) wrap.style.display = hasGrade ? 'block' : 'none';
+      if (valInput) valInput.value = hasGrade ? act.grade_obtained : '';
+    }
+  });
+
   // Cancelar edición en formularios de Registro
   document.getElementById('cancel-period-edit')?.addEventListener('click', cancelPeriodEdit);
   document.getElementById('cancel-subject-edit')?.addEventListener('click', cancelSubjectEdit);
