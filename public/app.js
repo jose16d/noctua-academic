@@ -54,6 +54,17 @@ function escapeHtml(value) {
 }
 
 /**
+ * Convierte un valor a numero de forma segura o retorna un valor por defecto.
+ * @param {*} val - Valor a parsear.
+ * @param {number} defaultVal - Valor de respaldo si es NaN.
+ * @returns {number}
+ */
+function asNumber(val, defaultVal = 0) {
+  const n = Number(val);
+  return isNaN(n) ? defaultVal : n;
+}
+
+/**
  * Muestra una notificación Toast animada y accesible.
  * @param {string} message - Mensaje a mostrar.
  * @param {string} type - 'success' | 'error' | 'warning' | 'info'
@@ -2127,9 +2138,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cancel-activity-edit')?.addEventListener('click', cancelActivityEdit);
 
   // Sincronización automática de peso y puntaje máximo de actividades
-  document.getElementById('activity-subject')?.addEventListener('change', syncActivityWeightFromGradeTotal);
-  document.getElementById('activity-grade-total')?.addEventListener('input', syncActivityWeightFromGradeTotal);
-  document.getElementById('activity-weight')?.addEventListener('input', syncActivityGradeTotalFromWeight);
+  ['change', 'input'].forEach((evt) => {
+    document.getElementById('activity-subject')?.addEventListener(evt, syncActivityWeightFromGradeTotal);
+  });
+  ['input', 'change', 'keyup'].forEach((evt) => {
+    document.getElementById('activity-grade-total')?.addEventListener(evt, syncActivityWeightFromGradeTotal);
+    document.getElementById('activity-weight')?.addEventListener(evt, syncActivityGradeTotalFromWeight);
+  });
 
   // Filtros y búsquedas en tiempo real en Registro
   document.getElementById('subject-search-input')?.addEventListener('input', renderRegistrationView);
