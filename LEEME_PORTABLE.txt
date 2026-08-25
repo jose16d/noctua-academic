@@ -1,5 +1,5 @@
 ============================================================================
-🦉 NOCTUA ACADEMIC — VERSIÓN PORTABLE PARA WINDOWS (v2.0.0)
+🦉 NOCTUA ACADEMIC — VERSIÓN PORTABLE PARA WINDOWS (v2.1.0)
 ============================================================================
 
 ¡Bienvenido a la versión portable de Noctua Academic!
