@@ -89,6 +89,18 @@ noctua-academic/
 
 ---
 
+## 🪟 Versión Portable / Ejecución Directa en Windows
+
+Noctua incluye lanzadores integrados para ejecutarse como una **aplicación de escritorio nativa e independiente** (sin consolas molestas):
+
+- **`Iniciar Noctua.bat`**: Inicia el servidor local y abre automáticamente la ventana de aplicación en Edge/Chrome.
+- **`Noctua.vbs`**: Lanzador silencioso en segundo plano.
+- **`Cerrar Noctua.bat`**: Detiene cualquier instancia activa de Noctua de forma segura.
+
+> 💡 **Descarga directa:** Puedes descargar el archivo compilado `Noctua-Academic-v2.0.0-Portable-Windows.zip` desde la sección de [Releases de GitHub](https://github.com/jose16d/noctua-academic/releases) para usar la aplicación sin necesidad de configurar Node.js manualmente.
+
+---
+
 ## 🧪 Ejecución de Pruebas Automatizadas
 
 El proyecto cuenta con cobertura completa usando el ejecutor nativo de Node.js:

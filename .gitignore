@@ -22,3 +22,10 @@ desktop.ini
 .env
 .env.local
 .env.*.local
+
+# Carpeta de aplicación portable local y archivos zip
+portable-app/
+Noctua-Portable/
+dist/
+dist-portable/
+*.zip

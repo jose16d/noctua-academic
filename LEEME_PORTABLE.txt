@@ -1,0 +1,47 @@
+============================================================================
+🦉 NOCTUA ACADEMIC — VERSIÓN PORTABLE PARA WINDOWS (v2.0.0)
+============================================================================
+
+¡Bienvenido a la versión portable de Noctua Academic!
+
+Esta carpeta es 100% autónoma e independiente. Puedes moverla a cualquier parte
+de tu disco, llevarla en una memoria USB o copiarla a otra computadora con Windows.
+
+----------------------------------------------------------------------------
+🚀 CÓMO INICIAR LA APLICACIÓN (OPCIONES DE ARRANQUE)
+----------------------------------------------------------------------------
+
+1. [⭐ MÉTODO PRINCIPAL RECOMENDADO]:
+   👉 Haz doble clic en "Noctua.exe"
+   Ejecutable binario nativo de Windows. Inicia la suite en segundo plano
+   y abre la ventana de escritorio independiente (1280x820px) sin consolas
+   negras ni advertencias. 100% compatible y seguro.
+
+2. [MÉTODO CLÁSICO BATCH]:
+   👉 Haz doble clic en "Iniciar Noctua.bat"
+   Inicia la aplicación en una consola de comandos donde puedes ver los logs.
+
+3. [MÉTODO SCRIPT SILENCIOSO]:
+   👉 Haz doble clic en "Noctua.vbs"
+   Lanzador VBScript alternativo.
+
+----------------------------------------------------------------------------
+🛑 CÓMO CERRAR LA APLICACIÓN
+----------------------------------------------------------------------------
+- Simplemente cierra la ventana de Noctua.
+- Si deseas apagar cualquier proceso residual del servidor, haz doble clic en:
+  👉 "Cerrar Noctua.bat"
+
+----------------------------------------------------------------------------
+💾 TUS DATOS Y PRIVACIDAD
+----------------------------------------------------------------------------
+- Toda tu información académica se almacena de forma persistente dentro de
+  esta misma carpeta en: "data/university.db" (SQLite local).
+- Puedes generar respaldos JSON o exportar tus notas a Excel (.csv) y PDF
+  en cualquier momento desde la interfaz.
+
+----------------------------------------------------------------------------
+⚖️ LICENCIA
+----------------------------------------------------------------------------
+Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0).
+============================================================================
